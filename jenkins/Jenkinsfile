@@ -1,9 +1,41 @@
 pipeline {
-    agent any
+    agent {label 'docker'}
     stages {
         stage('Greeting') {
             steps {
-                sh 'echo Hello from master branch'
+                sh 'echo Hello from Dev branch'
+            }
+        }
+        stage('preparation') {
+            steps {
+                git 'https://https://github.com/AbdelrahmanAdelTaha/pyflask-app-example.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'sudo docker build . -t abdelrahmanadel97/pyflask-app:v1.0'
+            }
+        }
+        stage('artifact') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                    sh 'sudo docker login -u ${USERNAME} -p ${PASSWORD}'
+                    sh 'sudo docker push abdelrahmanadel97/pyflask-app:v1.0'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'sudo docker run -d -p 5005:5000 abdelrahmanadel97/pyflask-app:v1.0'
+            }
+
+            post{
+                success{
+                    slackSend(color:'#47d147', message:'All steps have been completed successfully for our app in Docker_Slave_Container')
+                }
+                failure{
+                    slackSend(color:'#ff0000', message:'process faild in Docker_Slave_Container')
+                }
             }
         }
     }
